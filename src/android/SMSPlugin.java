@@ -236,8 +236,10 @@ extends CordovaPlugin {
         int fid = filter.has("_id") ? filter.optInt("_id") : -1;
         String faddress = filter.optString(ADDRESS);
         String fcontent = filter.optString(BODY);
+        String fContains = filter.has("contains")?filter.optString("contains"):"";
+        Log.d("contains",fContains);
         int indexFrom = filter.has("indexFrom") ? filter.optInt("indexFrom") : 0;
-        int maxCount = filter.has("maxCount") ? filter.optInt("maxCount") : 10;
+        //int maxCount = filter.has("maxCount") ? filter.optInt("maxCount") : 10;
         JSONArray jsons = new JSONArray();
         Activity ctx = this.cordova.getActivity();
         Uri uri = Uri.parse((SMS_URI_ALL + uri_filter));
@@ -253,14 +255,16 @@ extends CordovaPlugin {
             } else if (faddress.length() > 0) {
                 matchFilter = PhoneNumberUtils.compare(faddress, cur.getString(cur.getColumnIndex(ADDRESS)).trim());
             } else if (fcontent.length() > 0) {
-                matchFilter = fcontent.contains(cur.getString(cur.getColumnIndex(BODY)).trim());
-            } else {
+                matchFilter = fcontent.equals(cur.getString(cur.getColumnIndex(BODY)).trim());
+            } else if (fContains.length() > 0) {
+                matchFilter = (cur.getString(cur.getColumnIndex(BODY)).trim()).contains(fContains.trim());
+            }else {
                 matchFilter = true;
             }
             if (! matchFilter) continue;
             
             if (i < indexFrom) continue;
-            if (i >= indexFrom + maxCount) break;
+          //  if (i >= indexFrom + maxCount) break;
             ++i;
 
             if ((json = this.getJsonFromCursor(cur)) == null) {
