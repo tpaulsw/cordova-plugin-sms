@@ -253,7 +253,7 @@ extends CordovaPlugin {
             } else if (faddress.length() > 0) {
                 matchFilter = PhoneNumberUtils.compare(faddress, cur.getString(cur.getColumnIndex(ADDRESS)).trim());
             } else if (fcontent.length() > 0) {
-                matchFilter = fcontent.equals(cur.getString(cur.getColumnIndex(BODY)).trim());
+                matchFilter = fcontent.contains(cur.getString(cur.getColumnIndex(BODY)).trim());
             } else {
                 matchFilter = true;
             }
