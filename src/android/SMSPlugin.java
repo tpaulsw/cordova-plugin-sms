@@ -18,9 +18,11 @@ import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.telephony.PhoneNumberUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -237,7 +239,17 @@ extends CordovaPlugin {
         String faddress = filter.optString(ADDRESS);
         String fcontent = filter.optString(BODY);
         String fContains = filter.has("contains")?filter.optString("contains"):"";
-        Log.d("contains",fContains);
+        String fArray = filter.has("findBy")?filter.optString("findBy"):"";
+
+        ArrayList ayy = new ArrayList();
+        if(fArray.length() > 0)
+        {
+            String[] arr = fArray.split(",");
+            for (String a : arr)
+                ayy.add(a);
+        }
+        Log.d("contains",String.valueOf(ayy));
+
         int indexFrom = filter.has("indexFrom") ? filter.optInt("indexFrom") : 0;
         //int maxCount = filter.has("maxCount") ? filter.optInt("maxCount") : 10;
         JSONArray jsons = new JSONArray();
@@ -258,11 +270,24 @@ extends CordovaPlugin {
                 matchFilter = fcontent.equals(cur.getString(cur.getColumnIndex(BODY)).trim());
             } else if (fContains.length() > 0) {
                 matchFilter = (cur.getString(cur.getColumnIndex(BODY)).trim()).contains(fContains.trim());
+            } else if (ayy.size() > 0) {
+                for(int j = 0;j < ayy.size();j++)
+                {
+                    Log.d("test "+j,ayy.get(j).toString());
+                    matchFilter = (cur.getString(cur.getColumnIndex(BODY)).trim()).contains(ayy.get(j).toString().trim());
+                    if(matchFilter == true)
+                    {
+                        Log.d("testing "+j,String.valueOf(matchFilter));
+                        break;
+
+                    }
+                }
+
             }else {
                 matchFilter = true;
             }
             if (! matchFilter) continue;
-            
+
             if (i < indexFrom) continue;
           //  if (i >= indexFrom + maxCount) break;
             ++i;
