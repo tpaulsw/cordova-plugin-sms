@@ -22,6 +22,8 @@ import android.widget.Toast;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.util.ArrayList;
 
 import org.apache.cordova.CallbackContext;
@@ -30,6 +32,10 @@ import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 public class SMSPlugin
 extends CordovaPlugin {
@@ -232,13 +238,16 @@ extends CordovaPlugin {
     }
 
     private PluginResult listSMS(JSONObject filter, CallbackContext callbackContext) {
-        Log.i(LOGTAG, ACTION_LIST_SMS);
+        Log.d(LOGTAG, ACTION_LIST_SMS);
+        Log.d("urifilter",String.valueOf(filter));
         String uri_filter = filter.has(BOX) ? filter.optString(BOX) : "inbox";
         int fread = filter.has(READ) ? filter.optInt(READ) : -1;
         int fid = filter.has("_id") ? filter.optInt("_id") : -1;
         String faddress = filter.optString(ADDRESS);
         String fcontent = filter.optString(BODY);
+        // single matching of string ----------------
         String fContains = filter.has("contains")?filter.optString("contains"):"";
+        // multiple string matching start ----------------------
         String fArray = filter.has("findBy")?filter.optString("findBy"):"";
 
         ArrayList ayy = new ArrayList();
@@ -249,9 +258,27 @@ extends CordovaPlugin {
                 ayy.add(a);
         }
         Log.d("contains",String.valueOf(ayy));
-
+        // multiple string matching end --------------------------
+        // date filter start ---------------------
+        String fromDate = filter.has("dateFrom")?filter.optString("dateFrom"):"";
+        Date date1;
+        Log.d("fromDate",fromDate);
+        Calendar calendar2 = Calendar.getInstance(Locale.getDefault());
+        if(fromDate != "")
+        {
+            DateFormat dtF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            try{
+                date1=dtF.parse(fromDate);
+                calendar2.setTimeInMillis(date1.getTime());
+                Log.d("fromDate",calendar2.getTime().toString());
+            }
+            catch (Exception e) {
+                Log.d("error","hkdfjgkd");
+                e.printStackTrace();
+            }
+        }
         int indexFrom = filter.has("indexFrom") ? filter.optInt("indexFrom") : 0;
-        //int maxCount = filter.has("maxCount") ? filter.optInt("maxCount") : 10;
+        int maxCount = filter.has("maxCount") ? filter.optInt("maxCount") : 20;
         JSONArray jsons = new JSONArray();
         Activity ctx = this.cordova.getActivity();
         Uri uri = Uri.parse((SMS_URI_ALL + uri_filter));
@@ -260,6 +287,7 @@ extends CordovaPlugin {
         while (cur.moveToNext()) {
             JSONObject json;
             boolean matchFilter = false;
+
             if (fid > -1) {
                 matchFilter = (fid == cur.getInt(cur.getColumnIndex("_id")));
             } else if (fread > -1) {
@@ -269,15 +297,15 @@ extends CordovaPlugin {
             } else if (fcontent.length() > 0) {
                 matchFilter = fcontent.equals(cur.getString(cur.getColumnIndex(BODY)).trim());
             } else if (fContains.length() > 0) {
-                matchFilter = (cur.getString(cur.getColumnIndex(BODY)).trim()).contains(fContains.trim());
+                matchFilter = (cur.getString(cur.getColumnIndex(BODY)).trim()).toLowerCase().contains(fContains.trim());
             } else if (ayy.size() > 0) {
                 for(int j = 0;j < ayy.size();j++)
                 {
-                    Log.d("test "+j,ayy.get(j).toString());
-                    matchFilter = (cur.getString(cur.getColumnIndex(BODY)).trim()).contains(ayy.get(j).toString().trim());
+                   // Log.d("test "+j,ayy.get(j).toString());
+                    matchFilter = (cur.getString(cur.getColumnIndex(BODY)).trim()).toLowerCase().contains(ayy.get(j).toString().trim());
                     if(matchFilter == true)
                     {
-                        Log.d("testing "+j,String.valueOf(matchFilter));
+                      //  Log.d("testing "+j,String.valueOf(matchFilter));
                         break;
 
                     }
@@ -286,10 +314,28 @@ extends CordovaPlugin {
             }else {
                 matchFilter = true;
             }
+            if(matchFilter == true && fromDate != "") // date comparision ----------------
+            {
+                Long timestamp = Long.parseLong(cur.getString(cur.getColumnIndex("date")));
+                Calendar calendar = Calendar.getInstance(Locale.getDefault());
+                calendar.setTimeInMillis(timestamp);
+                Date finaldate = calendar.getTime();
+
+                Log.d("dateCompared",String.valueOf(calendar2.getTime().compareTo(finaldate)));
+                if(calendar2.getTime().compareTo(finaldate) > 0)
+                {
+                    matchFilter = false;
+                }
+                else
+                {
+                    Log.d("sentDate",finaldate.toString());
+                }
+
+            }
             if (! matchFilter) continue;
 
             if (i < indexFrom) continue;
-          //  if (i >= indexFrom + maxCount) break;
+            //if (i >= indexFrom + maxCount) break;
             ++i;
 
             if ((json = this.getJsonFromCursor(cur)) == null) {
